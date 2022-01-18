@@ -112,6 +112,7 @@ for part in list(partitions.keys()) + ['ALL']:
         hl = pyslurm.hostlist()
         hl.create(partitions[part]['nodes'])
         for node in hl.get_list():
+            node = node.decode() # Python3-ism or pyslurm bug?
             if node not in node_partitions:
                 node_partitions[node] = []
             node_partitions[node].append(part)
