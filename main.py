@@ -172,18 +172,12 @@ for entry in slurm_command("sinfo", ["-N"])["sinfo"]:
     metrics["partition"]["mem_usage"]["ALL"] += entry["memory"]["allocated"] * 1048576
     metrics["partition"]["mem_usage_pc"]["ALL"] = 100 * (float(metrics["partition"]["mem_usage"]["ALL"]) / float(metrics["partition"]["mem_total"]["ALL"]))
 
-    if entry["gres"]["total"] != "":
-
-
-nodes = pyslurmnode.get()
-for node in nodes:
-    node_data = nodes.get(node)
-
     gpu_total = 0
     gpu_usage = 0
-    if node_data["gres"]:
-        gres_total = pyslurm.node().parse_gres(node_data["gres"][0])
-        gres_usage = pyslurm.node().parse_gres(node_data["gres_used"][0])
+    if entry["gres"]["total"] != "":
+        gres_total = entry["gres"]["total"].split(",")
+        gres_usage = entry["gres"]["used"].split(",")
+
         for g in gres_total:
             is_gpu = re.match(r'^gpu:([0-9]+)\(?', g)
             if is_gpu:
@@ -202,12 +196,12 @@ for node in nodes:
 
     if node in node_partitions:
         for part in node_partitions[node]:
-            metrics["partition"]["cpu_total"][part] += node_data["cpus"]
-            metrics["partition"]["cpu_usage"][part] += node_data["alloc_cpus"]
+            metrics["partition"]["cpu_total"][part] += entry["cpus"]["total"]
+            metrics["partition"]["cpu_usage"][part] += entry["cpus"]["allocated"]
             metrics["partition"]["cpu_usage_pc"][part] = 100 * (float(metrics["partition"]["cpu_usage"][part]) / metrics["partition"]["cpu_total"][part])
 
-            metrics["partition"]["mem_total"][part] += node_data["real_memory"] * 1048576
-            metrics["partition"]["mem_usage"][part] += node_data["alloc_mem"] * 1048576
+            metrics["partition"]["mem_total"][part] += entry["memory"]["maximum"] * 1048576
+            metrics["partition"]["mem_usage"][part] += entry["memory"]["allocated"] * 1048576
             metrics["partition"]["mem_usage_pc"][part] = 100 * (float(metrics["partition"]["mem_usage"][part]) / metrics["partition"]["mem_total"][part])
 
             metrics["partition"]["gpu_total"][part] += gpu_total
