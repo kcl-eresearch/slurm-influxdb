@@ -3,6 +3,7 @@
 # Get various Slurm metrics["partition"] and feed them into an InfluxDB time-series database
 # Xand Meaden, King's College London
 
+import argparse
 import datetime
 import grp
 import influxdb
@@ -39,11 +40,15 @@ def expand_nodelist(nodelist):
 
     return result
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--config_file", default="config.yaml")
+args = parser.parse_args()
+
 try:
-    with open('config.yaml') as fh:
-        config = yaml.load(fh, Loader=yaml.SafeLoader)
-except:
-    sys.stderr.write('Failed to load configuration\n')
+    with open(args.config_file) as fh:
+        config = yaml.safe_load(fh)
+except Exception as e:
+    sys.stderr.write('Failed to load configuration: %s\n' % e)
     sys.exit(1)
 
 try:
@@ -126,7 +131,7 @@ for entry in slurm_command("sinfo", ["-a"])["sinfo"]:
 partitions = list(set(partitions))
 
 # Setup data structures, with stats set to 0
-for part in list(partitions.keys) + ["ALL"]:
+for part in partitions + ["ALL"]:
     metrics["partition"]["cpu_total"][part] = 0
     metrics["partition"]["cpu_usage"][part] = 0
     metrics["partition"]["cpu_usage_pc"][part] = 0
