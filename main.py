@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 #
 # Get various Slurm metrics["partition"] and feed them into an InfluxDB time-series database
-# Xand Meaden, King's College London
+# Xand Meaden, King"s College London
 
 import argparse
 import datetime
@@ -17,12 +17,12 @@ import yaml
 
 def tres_to_dict(tres_csv):
     resources = {}
-    for resource in tres_csv.split(','):
-        [k, v] = resource.split('=')
+    for resource in tres_csv.split(","):
+        [k, v] = resource.split("=")
         resources[k] = v
     return resources
 
-def slurm_command(command, args):
+def slurm_command(command, args=[]):
     try:
         result = json.loads(subprocess.run(["/usr/bin/%s" % command, "--json"] + args, capture_output=True, check=True, text=True).stdout)
     except Exception as e:
@@ -48,21 +48,21 @@ try:
     with open(args.config_file) as fh:
         config = yaml.safe_load(fh)
 except Exception as e:
-    sys.stderr.write('Failed to load configuration: %s\n' % e)
+    sys.stderr.write("Failed to load configuration: %s\n" % e)
     sys.exit(1)
 
 try:
     client = influxdb.InfluxDBClient(host=config["influxdb_host"], port=config["influxdb_port"], username=config["influxdb_username"], password=config["influxdb_password"], ssl=config["influxdb_ssl"], verify_ssl=config["influxdb_verify_ssl"])
 except:
-    sys.stderr.write('Failed to connect to InfluxDB\n')
+    sys.stderr.write("Failed to connect to InfluxDB\n")
     sys.exit(2)
 
 if config["user_lookup"]:
     try:
-        ldap_c = ldap.initialize('ldaps://%s:636' % config["ldap_hostname"])
+        ldap_c = ldap.initialize("ldaps://%s:636" % config["ldap_hostname"])
         ldap_c.simple_bind_s(config["ldap_username"], config["ldap_password"])
     except:
-        sys.stderr.write('Failed to bind to LDAP\n')
+        sys.stderr.write("Failed to bind to LDAP\n")
         sys.exit(4)
 
 groups = config["groups"]
@@ -118,7 +118,7 @@ user_ids = {}
 user_groups = {}
 user_ldap = {}
 
-now = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+now = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
 for entry in slurm_command("sinfo", ["-a"])["sinfo"]:
     partitions.append(entry["partition"]["name"])
@@ -184,13 +184,13 @@ for entry in slurm_command("sinfo", ["-N"])["sinfo"]:
         gres_usage = entry["gres"]["used"].split(",")
 
         for g in gres_total:
-            is_gpu = re.match(r'^gpu:([0-9]+)\(?', g)
+            is_gpu = re.match(r"^gpu:([0-9]+)\(?", g)
             if is_gpu:
                 gpu_total = int(is_gpu.group(1))
 
         if gpu_total > 0:
             for g in gres_usage:
-                is_gpu = re.match(r'^gpu:(?:[^:]*:?)([0-9]+)\(?', g)
+                is_gpu = re.match(r"^gpu:(?:[^:]*:?)([0-9]+)\(?", g)
                 if is_gpu:
                     gpu_usage = int(is_gpu.group(1))
 
@@ -215,10 +215,7 @@ for entry in slurm_command("sinfo", ["-N"])["sinfo"]:
                 metrics["partition"]["gpu_usage_pc"][part] = 100 * (float(metrics["partition"]["gpu_usage"][part]) / metrics["partition"]["gpu_total"][part])
 
 # Now go through the jobs list to see user-specific stuff
-jobs = pyslurm.job().get()
-for job in jobs:
-    job = jobs.get(job)
-
+for job in slurm_command("squeue")["jobs"]:
     if job["user_id"] not in user_ids:
         user = pwd.getpwuid(job["user_id"])[0]
         user_ids[job["user_id"]] = user
@@ -234,12 +231,12 @@ for job in jobs:
 
     if config["user_lookup"]:
         if user not in user_ldap:
-            result_id = ldap_c.search(config["ldap_userbase"], ldap.SCOPE_SUBTREE, '(%s=%s)' % (config["ldap_username_attrib"], user), [config["ldap_grouping_attrib"]])
+            result_id = ldap_c.search(config["ldap_userbase"], ldap.SCOPE_SUBTREE, "(%s=%s)" % (config["ldap_username_attrib"], user), [config["ldap_grouping_attrib"]])
             result_type, result_data = ldap_c.result(result_id, 0)
             if result_data == []:
-                user_ldap[user] = 'unknown'
+                user_ldap[user] = "unknown"
             else:
-                user_ldap[user] = result_data[0][1][config["ldap_grouping_attrib"]][0]
+                user_ldap[user] = result_data[0][1][config["ldap_grouping_attrib"]][0].decode()
 
         if user_ldap[user] not in metrics["ldap_attrib"]["jobs_running"]:
             metrics["ldap_attrib"]["jobs_running"][user_ldap[user]] = 0
@@ -250,29 +247,29 @@ for job in jobs:
             metrics["ldap_attrib"]["queue_jobs"][user_ldap[user]] = 0
             metrics["ldap_attrib"]["queue_time"][user_ldap[user]] = 0
 
-    if job["job_state"] == 'RUNNING':
+    if job["job_state"] == "RUNNING":
         metrics["partition"]["jobs_running"]["ALL"] += 1
         metrics["partition"]["jobs_running"][job["partition"]] += 1
 
         tres_alloc = tres_to_dict(job["tres_alloc_str"])
         cpu = int(tres_alloc["cpu"])
         mem = 0
-        if 'mem' in tres_alloc:
-            m = re.match('^[0-9]+[MGT]$', tres_alloc["mem"])
+        if "mem" in tres_alloc:
+            m = re.match(r"^[0-9]+[MGT]$", tres_alloc["mem"])
             if m:
                 mem = float(m.group(1))
-                if tres_alloc.group(2) == 'G':
+                if tres_alloc.group(2) == "G":
                     mem *= 1024
-                elif tres_alloc.group(2) == 'T':
+                elif tres_alloc.group(2) == "T":
                     mem *= 1048576
                 mem *= 1048576
                 mem = int(mem)
 
         gpu = 0
-        if 'tres_per_node' in job and job["tres_per_node"]:
-            tres_per_node = re.match(r'gpu:([0-9]+)', job["tres_per_node"])
+        if "tres_per_node" in job and job["tres_per_node"] and "node_count" in job and job["node_count"]["set"]:
+            tres_per_node = re.match(r"gpu:([0-9]+)", job["tres_per_node"])
             if tres_per_node:
-                gpu = int(tres_per_node.group(1)) * job["num_nodes"]
+                gpu = int(tres_per_node.group(1)) * job["node_count"]["number"]
 
         metrics["user"]["jobs_running"][user] += 1
         metrics["user"]["cpu_usage"][user] += cpu
@@ -304,9 +301,9 @@ for job in jobs:
             metrics["ldap_attrib"]["queue_jobs"][user_ldap[user]] += 1
             metrics["ldap_attrib"]["queue_time"][user_ldap[user]] = (float(metrics["ldap_attrib"]["queue_time"][user_ldap[user]] + queue_time)) / metrics["ldap_attrib"]["queue_jobs"][user_ldap[user]]
 
-    elif job["job_state"] == 'PENDING':
+    elif job["job_state"] == "PENDING":
         metrics["partition"]["jobs_pending"]["ALL"] += 1
-        for partition in job["partition"].split(','):
+        for partition in job["partition"].split(","):
             if partition in metrics["partition"]["jobs_pending"]:
                 metrics["partition"]["jobs_pending"][partition] += 1
 
@@ -320,10 +317,10 @@ for job in jobs:
             metrics["ldap_attrib"]["jobs_pending"][user_ldap[user]] += 1
 
 payload = []
-for grouping in ["partition', 'user', 'group', 'ldap_attrib"]:
-    for reading in ["cpu_total', 'cpu_usage', 'cpu_usage_pc', 'gpu_total', 'gpu_usage', 'gpu_usage_pc', 'mem_total', 'mem_usage', 'mem_usage_pc', 'jobs_running', 'jobs_pending', 'queue_time"]:
+for grouping in ["partition", "user", "group", "ldap_attrib"]:
+    for reading in ["cpu_total", "cpu_usage", "cpu_usage_pc", "gpu_total", "gpu_usage", "gpu_usage_pc", "mem_total", "mem_usage", "mem_usage_pc", "jobs_running", "jobs_pending", "queue_time"]:
         if reading in metrics[grouping] and len(metrics[grouping][reading]) > 0:
             for key in metrics[grouping][reading].keys():
-                payload.append({'measurement': '%s_%s' % (grouping, reading), 'time': now, 'fields': {reading: float(metrics[grouping][reading][key])}, 'tags': {grouping: key}})
+                payload.append({"measurement": "%s_%s" % (grouping, reading), "time": now, "fields": {reading: float(metrics[grouping][reading][key])}, "tags": {grouping: key}})
 
 client.write_points(payload, database=config["influxdb_database"])
