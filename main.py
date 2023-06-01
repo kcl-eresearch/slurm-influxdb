@@ -163,7 +163,7 @@ for group in groups:
 
 # Go through all the nodes and get their cpu/gpu/memory usage and store for each partition they belong to
 seen = []
-for entry in slurm_command("sinfo", ["-N"])["sinfo"]:
+for entry in slurm_command("sinfo", ["-N", "-OGresUsed"])["sinfo"]:
     node = entry["nodes"]["nodes"][0]
     if node in seen:
         continue
