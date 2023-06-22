@@ -86,14 +86,14 @@ metrics["partition"]["jobs_pending"] = {}
 metrics["partition"]["queue_time"] = {}
 metrics["partition"]["queue_jobs"] = {}
 
-metrics["user"] = {}
-metrics["user"]["cpu_usage"] = {}
-metrics["user"]["gpu_usage"] = {}
-metrics["user"]["mem_usage"] = {}
-metrics["user"]["jobs_running"] = {}
-metrics["user"]["jobs_pending"] = {}
-metrics["user"]["queue_time"] = {}
-metrics["user"]["queue_jobs"] = {}
+#metrics["user"] = {}
+#metrics["user"]["cpu_usage"] = {}
+#metrics["user"]["gpu_usage"] = {}
+#metrics["user"]["mem_usage"] = {}
+#metrics["user"]["jobs_running"] = {}
+#metrics["user"]["jobs_pending"] = {}
+#metrics["user"]["queue_time"] = {}
+#metrics["user"]["queue_jobs"] = {}
 
 metrics["group"] = {}
 metrics["group"]["cpu_usage"] = {}
@@ -219,13 +219,13 @@ for job in slurm_command("squeue")["jobs"]:
     if job["user_id"] not in user_ids:
         user = pwd.getpwuid(job["user_id"])[0]
         user_ids[job["user_id"]] = user
-        metrics["user"]["cpu_usage"][user] = 0
-        metrics["user"]["gpu_usage"][user] = 0
-        metrics["user"]["mem_usage"][user] = 0
-        metrics["user"]["jobs_running"][user] = 0
-        metrics["user"]["jobs_pending"][user] = 0
-        metrics["user"]["queue_time"][user] = 0
-        metrics["user"]["queue_jobs"][user] = 0
+#        metrics["user"]["cpu_usage"][user] = 0
+#        metrics["user"]["gpu_usage"][user] = 0
+#        metrics["user"]["mem_usage"][user] = 0
+#        metrics["user"]["jobs_running"][user] = 0
+#        metrics["user"]["jobs_pending"][user] = 0
+#        metrics["user"]["queue_time"][user] = 0
+#        metrics["user"]["queue_jobs"][user] = 0
     else:
         user = user_ids[job["user_id"]]
 
@@ -271,14 +271,14 @@ for job in slurm_command("squeue")["jobs"]:
             if tres_per_node:
                 gpu = int(tres_per_node.group(1)) * job["node_count"]["number"]
 
-        metrics["user"]["jobs_running"][user] += 1
-        metrics["user"]["cpu_usage"][user] += cpu
-        metrics["user"]["gpu_usage"][user] += gpu
-        metrics["user"]["mem_usage"][user] += mem
+        #metrics["user"]["jobs_running"][user] += 1
+        #metrics["user"]["cpu_usage"][user] += cpu
+        #metrics["user"]["gpu_usage"][user] += gpu
+        #metrics["user"]["mem_usage"][user] += mem
 
         queue_time = job["start_time"] - job["submit_time"]
-        metrics["user"]["queue_jobs"][user] += 1
-        metrics["user"]["queue_time"][user] = (float(metrics["user"]["queue_time"][user] + queue_time)) / metrics["user"]["queue_jobs"][user]
+        #metrics["user"]["queue_jobs"][user] += 1
+        #metrics["user"]["queue_time"][user] = (float(metrics["user"]["queue_time"][user] + queue_time)) / metrics["user"]["queue_jobs"][user]
         metrics["partition"]["queue_jobs"]["ALL"] += 1
         metrics["partition"]["queue_time"]["ALL"] = (float(metrics["partition"]["queue_time"]["ALL"] + queue_time)) / metrics["partition"]["queue_jobs"]["ALL"]
         metrics["partition"]["queue_jobs"][job["partition"]] += 1
@@ -307,7 +307,7 @@ for job in slurm_command("squeue")["jobs"]:
             if partition in metrics["partition"]["jobs_pending"]:
                 metrics["partition"]["jobs_pending"][partition] += 1
 
-        metrics["user"]["jobs_pending"][user] += 1
+        #metrics["user"]["jobs_pending"][user] += 1
 
         if user in user_groups:
             for group in user_groups[user]:
@@ -317,7 +317,7 @@ for job in slurm_command("squeue")["jobs"]:
             metrics["ldap_attrib"]["jobs_pending"][user_ldap[user]] += 1
 
 payload = []
-for grouping in ["partition", "user", "group", "ldap_attrib"]:
+for grouping in ["partition", "group", "ldap_attrib"]:
     for reading in ["cpu_total", "cpu_usage", "cpu_usage_pc", "gpu_total", "gpu_usage", "gpu_usage_pc", "mem_total", "mem_usage", "mem_usage_pc", "jobs_running", "jobs_pending", "queue_time"]:
         if reading in metrics[grouping] and len(metrics[grouping][reading]) > 0:
             for key in metrics[grouping][reading].keys():
