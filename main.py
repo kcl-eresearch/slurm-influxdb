@@ -276,30 +276,33 @@ for job in slurm_command("squeue")["jobs"]:
         #metrics["user"]["gpu_usage"][user] += gpu
         #metrics["user"]["mem_usage"][user] += mem
 
-        queue_time = job["start_time"] - job["submit_time"]
-        #metrics["user"]["queue_jobs"][user] += 1
-        #metrics["user"]["queue_time"][user] = (float(metrics["user"]["queue_time"][user] + queue_time)) / metrics["user"]["queue_jobs"][user]
-        metrics["partition"]["queue_jobs"]["ALL"] += 1
-        metrics["partition"]["queue_time"]["ALL"] = (float(metrics["partition"]["queue_time"]["ALL"] + queue_time)) / metrics["partition"]["queue_jobs"]["ALL"]
-        metrics["partition"]["queue_jobs"][job["partition"]] += 1
-        metrics["partition"]["queue_time"][job["partition"]] = (float(metrics["partition"]["queue_time"][job["partition"]] + queue_time)) / metrics["partition"]["queue_jobs"][job["partition"]]
+        try:
+            queue_time = job["start_time"]["number"] - job["submit_time"]["number"]
+            #metrics["user"]["queue_jobs"][user] += 1
+            #metrics["user"]["queue_time"][user] = (float(metrics["user"]["queue_time"][user] + queue_time)) / metrics["user"]["queue_jobs"][user]
+            metrics["partition"]["queue_jobs"]["ALL"] += 1
+            metrics["partition"]["queue_time"]["ALL"] = (float(metrics["partition"]["queue_time"]["ALL"] + queue_time)) / metrics["partition"]["queue_jobs"]["ALL"]
+            metrics["partition"]["queue_jobs"][job["partition"]] += 1
+            metrics["partition"]["queue_time"][job["partition"]] = (float(metrics["partition"]["queue_time"][job["partition"]] + queue_time)) / metrics["partition"]["queue_jobs"][job["partition"]]
 
-        if user in user_groups:
-            for group in user_groups[user]:
-                metrics["group"]["jobs_running"][group] += 1
-                metrics["group"]["cpu_usage"][group] += cpu
-                metrics["group"]["gpu_usage"][group] += gpu
-                metrics["group"]["mem_usage"][group] += mem
-                metrics["group"]["queue_jobs"][group] += 1
-                metrics["group"]["queue_time"][group] = (float(metrics["group"]["queue_time"][group] + queue_time)) / metrics["group"]["queue_jobs"][group]
+            if user in user_groups:
+                for group in user_groups[user]:
+                    metrics["group"]["jobs_running"][group] += 1
+                    metrics["group"]["cpu_usage"][group] += cpu
+                    metrics["group"]["gpu_usage"][group] += gpu
+                    metrics["group"]["mem_usage"][group] += mem
+                    metrics["group"]["queue_jobs"][group] += 1
+                    metrics["group"]["queue_time"][group] = (float(metrics["group"]["queue_time"][group] + queue_time)) / metrics["group"]["queue_jobs"][group]
 
-        if config["user_lookup"]:
-            metrics["ldap_attrib"]["jobs_running"][user_ldap[user]] += 1
-            metrics["ldap_attrib"]["cpu_usage"][user_ldap[user]] += cpu
-            metrics["ldap_attrib"]["gpu_usage"][user_ldap[user]] += gpu
-            metrics["ldap_attrib"]["mem_usage"][user_ldap[user]] += mem
-            metrics["ldap_attrib"]["queue_jobs"][user_ldap[user]] += 1
-            metrics["ldap_attrib"]["queue_time"][user_ldap[user]] = (float(metrics["ldap_attrib"]["queue_time"][user_ldap[user]] + queue_time)) / metrics["ldap_attrib"]["queue_jobs"][user_ldap[user]]
+            if config["user_lookup"]:
+                metrics["ldap_attrib"]["jobs_running"][user_ldap[user]] += 1
+                metrics["ldap_attrib"]["cpu_usage"][user_ldap[user]] += cpu
+                metrics["ldap_attrib"]["gpu_usage"][user_ldap[user]] += gpu
+                metrics["ldap_attrib"]["mem_usage"][user_ldap[user]] += mem
+                metrics["ldap_attrib"]["queue_jobs"][user_ldap[user]] += 1
+                metrics["ldap_attrib"]["queue_time"][user_ldap[user]] = (float(metrics["ldap_attrib"]["queue_time"][user_ldap[user]] + queue_time)) / metrics["ldap_attrib"]["queue_jobs"][user_ldap[user]]
+        except Exception as e:
+            sys.stderr.write("Exception: %s\n" % e)
 
     elif job["job_state"] == ["PENDING"]:
         metrics["partition"]["jobs_pending"]["ALL"] += 1
