@@ -247,7 +247,7 @@ for job in slurm_command("squeue")["jobs"]:
             metrics["ldap_attrib"]["queue_jobs"][user_ldap[user]] = 0
             metrics["ldap_attrib"]["queue_time"][user_ldap[user]] = 0
 
-    if job["job_state"] == "RUNNING":
+    if job["job_state"] == ["RUNNING"]:
         metrics["partition"]["jobs_running"]["ALL"] += 1
         metrics["partition"]["jobs_running"][job["partition"]] += 1
 
@@ -301,7 +301,7 @@ for job in slurm_command("squeue")["jobs"]:
             metrics["ldap_attrib"]["queue_jobs"][user_ldap[user]] += 1
             metrics["ldap_attrib"]["queue_time"][user_ldap[user]] = (float(metrics["ldap_attrib"]["queue_time"][user_ldap[user]] + queue_time)) / metrics["ldap_attrib"]["queue_jobs"][user_ldap[user]]
 
-    elif job["job_state"] == "PENDING":
+    elif job["job_state"] == ["PENDING"]:
         metrics["partition"]["jobs_pending"]["ALL"] += 1
         for partition in job["partition"].split(","):
             if partition in metrics["partition"]["jobs_pending"]:
