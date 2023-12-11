@@ -217,15 +217,12 @@ for entry in slurm_command("sinfo", ["-N", "-OGresUsed"])["sinfo"]:
 # Now go through the jobs list to see user-specific stuff
 for job in slurm_command("squeue")["jobs"]:
     if job["user_id"] not in user_ids:
-        user = pwd.getpwuid(job["user_id"])[0]
+        try:
+            user = pwd.getpwuid(job["user_id"])[0]
+        except KeyError:
+            sys.stderr.write("Failed resolving UID %d\n" % job["user_id"])
+            user = "unknown"
         user_ids[job["user_id"]] = user
-#        metrics["user"]["cpu_usage"][user] = 0
-#        metrics["user"]["gpu_usage"][user] = 0
-#        metrics["user"]["mem_usage"][user] = 0
-#        metrics["user"]["jobs_running"][user] = 0
-#        metrics["user"]["jobs_pending"][user] = 0
-#        metrics["user"]["queue_time"][user] = 0
-#        metrics["user"]["queue_jobs"][user] = 0
     else:
         user = user_ids[job["user_id"]]
 
