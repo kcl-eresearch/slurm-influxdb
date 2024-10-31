@@ -264,9 +264,11 @@ for job in slurm_command("squeue")["jobs"]:
 
         gpu = 0
         if "tres_per_node" in job and job["tres_per_node"] and "node_count" in job and job["node_count"]["set"]:
-            tres_per_node = re.match(r"gpu:([0-9]+)", job["tres_per_node"])
+            tres_per_node = re.match(r"gres/gpu:([0-9]+)", job["tres_per_node"])
             if tres_per_node:
                 gpu = int(tres_per_node.group(1)) * job["node_count"]["number"]
+            elif job["tres_per_node"] == "gres/gpu":
+                gpu = job["node_count"]["number"]
 
         #metrics["user"]["jobs_running"][user] += 1
         #metrics["user"]["cpu_usage"][user] += cpu
