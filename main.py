@@ -252,12 +252,12 @@ for job in slurm_command("squeue")["jobs"]:
         cpu = int(tres_alloc["cpu"])
         mem = 0
         if "mem" in tres_alloc:
-            m = re.match(r"^[0-9]+[MGT]$", tres_alloc["mem"])
+            m = re.match(r"^([0-9]+)([MGT])$", tres_alloc["mem"])
             if m:
                 mem = float(m.group(1))
-                if tres_alloc.group(2) == "G":
+                if m.group(2) == "G":
                     mem *= 1024
-                elif tres_alloc.group(2) == "T":
+                elif m.group(2) == "T":
                     mem *= 1048576
                 mem *= 1048576
                 mem = int(mem)
