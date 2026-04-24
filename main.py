@@ -6,6 +6,7 @@
 import argparse
 import datetime
 import grp
+import os
 import influxdb
 import json
 import ldap
@@ -50,6 +51,11 @@ try:
 except Exception as e:
     sys.stderr.write("Failed to load configuration: %s\n" % e)
     sys.exit(1)
+
+if not ("preserve_proxy" in config and config["preserve_proxy"]):
+    for var in ["http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY"]:
+        if var in os.environ:
+            del os.environ[var]
 
 try:
     client = influxdb.InfluxDBClient(host=config["influxdb_host"], port=config["influxdb_port"], username=config["influxdb_username"], password=config["influxdb_password"], ssl=config["influxdb_ssl"], verify_ssl=config["influxdb_verify_ssl"])
