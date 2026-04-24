@@ -233,6 +233,8 @@ for job in slurm_command("squeue")["jobs"]:
             if result_data == []:
                 user_ldap[user] = "unknown"
             else:
+                if config["ldap_grouping_attrib"] not in result_data[0][1]:
+                    result_data[0][1][config["ldap_grouping_attrib"]] = [b"unknown"]
                 user_ldap[user] = result_data[0][1][config["ldap_grouping_attrib"]][0].decode()
 
         if user_ldap[user] not in metrics["ldap_attrib"]["jobs_running"]:
