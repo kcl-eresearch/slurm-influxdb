@@ -288,9 +288,9 @@ for job in slurm_command("squeue")["jobs"]:
             #metrics["user"]["queue_jobs"][user] += 1
             #metrics["user"]["queue_time"][user] = (float(metrics["user"]["queue_time"][user] + queue_time)) / metrics["user"]["queue_jobs"][user]
             metrics["partition"]["queue_jobs"]["ALL"] += 1
-            metrics["partition"]["queue_time"]["ALL"] = (float(metrics["partition"]["queue_time"]["ALL"] + queue_time)) / metrics["partition"]["queue_jobs"]["ALL"]
+            metrics["partition"]["queue_time"]["ALL"] += queue_time
             metrics["partition"]["queue_jobs"][job["partition"]] += 1
-            metrics["partition"]["queue_time"][job["partition"]] = (float(metrics["partition"]["queue_time"][job["partition"]] * (metrics["partition"]["queue_jobs"][job["partition"]] - 1) + queue_time)) / metrics["partition"]["queue_jobs"][job["partition"]]
+            metrics["partition"]["queue_time"][job["partition"]] += queue_time
 
             if user in user_groups:
                 for group in user_groups[user]:
@@ -299,7 +299,7 @@ for job in slurm_command("squeue")["jobs"]:
                     metrics["group"]["gpu_usage"][group] += gpu
                     metrics["group"]["mem_usage"][group] += mem
                     metrics["group"]["queue_jobs"][group] += 1
-                    metrics["group"]["queue_time"][group] = (float(metrics["group"]["queue_time"][group] + queue_time)) / metrics["group"]["queue_jobs"][group]
+                    metrics["group"]["queue_time"][group] += queue_time
 
             if config["user_lookup"]:
                 metrics["ldap_attrib"]["jobs_running"][user_ldap[user]] += 1
@@ -307,7 +307,7 @@ for job in slurm_command("squeue")["jobs"]:
                 metrics["ldap_attrib"]["gpu_usage"][user_ldap[user]] += gpu
                 metrics["ldap_attrib"]["mem_usage"][user_ldap[user]] += mem
                 metrics["ldap_attrib"]["queue_jobs"][user_ldap[user]] += 1
-                metrics["ldap_attrib"]["queue_time"][user_ldap[user]] = (float(metrics["ldap_attrib"]["queue_time"][user_ldap[user]] + queue_time)) / metrics["ldap_attrib"]["queue_jobs"][user_ldap[user]]
+                metrics["ldap_attrib"]["queue_time"][user_ldap[user]] += queue_time
         except Exception as e:
             sys.stderr.write("Exception: %s\n" % e)
 
@@ -325,6 +325,20 @@ for job in slurm_command("squeue")["jobs"]:
 
         if config["user_lookup"]:
             metrics["ldap_attrib"]["jobs_pending"][user_ldap[user]] += 1
+
+# calculate mean queue time from cumulative queue time
+for partition in metrics["partition"]["queue_time"]:
+    if metrics["partition"]["queue_time"][partition] > 0:
+        metrics["partition"]["queue_time"][partition] = metrics["partition"]["queue_time"][partition] / metrics["partition"]["queue_jobs"][partition]
+
+for group in metrics["group"]["queue_time"]:
+    if metrics["group"]["queue_time"][group] > 0:
+        metrics["group"]["queue_time"][group] = metrics["group"]["queue_time"][group] / metrics["group"]["queue_jobs"][group]
+
+if config["user_lookup"]:
+    for user in metrics["ldap_attrib"]["queue_time"]:
+        if metrics["ldap_attrib"]["queue_time"][user] > 0:
+            metrics["ldap_attrib"]["queue_time"][user] = metrics["ldap_attrib"]["queue_time"][user] / metrics["ldap_attrib"]["queue_jobs"][user]
 
 payload = []
 for grouping in ["partition", "group", "ldap_attrib"]:
