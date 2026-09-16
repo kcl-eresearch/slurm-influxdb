@@ -290,7 +290,7 @@ for job in slurm_command("squeue")["jobs"]:
             metrics["partition"]["queue_jobs"]["ALL"] += 1
             metrics["partition"]["queue_time"]["ALL"] = (float(metrics["partition"]["queue_time"]["ALL"] + queue_time)) / metrics["partition"]["queue_jobs"]["ALL"]
             metrics["partition"]["queue_jobs"][job["partition"]] += 1
-            metrics["partition"]["queue_time"][job["partition"]] = (float(metrics["partition"]["queue_time"][job["partition"]] + queue_time)) / metrics["partition"]["queue_jobs"][job["partition"]]
+            metrics["partition"]["queue_time"][job["partition"]] = (float(metrics["partition"]["queue_time"][job["partition"]] * (metrics["partition"]["queue_jobs"][job["partition"]] - 1) + queue_time)) / metrics["partition"]["queue_jobs"][job["partition"]]
 
             if user in user_groups:
                 for group in user_groups[user]:
