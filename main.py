@@ -44,6 +44,12 @@ def expand_nodelist(nodelist):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--config_file", default="config.yaml")
+parser.add_argument("--local", action='store_true', help="""
+    Is this code running locally, instead of on an actual Slurm cluster?
+    If so, use the --local flag to read required data from files rather than
+    calling slurm commands, and print payload rather than writing to DB.
+    Expects sinfo.json, sinfo_gres.json, and squeue.json to be present in
+    working directory.""")
 args = parser.parse_args()
 
 try:
@@ -129,17 +135,17 @@ now = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
 # get job data to use in data structure setup
 
-# sinfo = slurm_command("sinfo", ["-a"])["sinfo"]
-# sinfo_gres = slurm_command("sinfo", ["-N", "-OGresUsed"])["sinfo"]
-# jobs = slurm_command("squeue")["jobs"]
-
-# for testing
-with open("../sinfo.json") as f:
-    sinfo = json.load(f)["sinfo"]
-with open("../sinfo_gres.json") as f:
-    sinfo_gres = json.load(f)["sinfo"]
-with open("../squeue.json") as f:
-    jobs = json.load(f)["jobs"]
+if args.local:
+    with open("sinfo.json") as f:
+        sinfo = json.load(f)["sinfo"]
+    with open("sinfo_gres.json") as f:
+        sinfo_gres = json.load(f)["sinfo"]
+    with open("squeue.json") as f:
+        jobs = json.load(f)["jobs"]
+else:
+    sinfo = slurm_command("sinfo", ["-a"])["sinfo"]
+    sinfo_gres = slurm_command("sinfo", ["-N", "-OGresUsed"])["sinfo"]
+    jobs = slurm_command("squeue")["jobs"]
 
 for entry in sinfo:
     partitions.append(entry["partition"]["name"])
@@ -367,5 +373,8 @@ for grouping in groupings:
         if reading in metrics[grouping] and len(metrics[grouping][reading]) > 0:
             for key in metrics[grouping][reading].keys():
                 payload.append({"measurement": "%s_%s" % (grouping, reading), "time": now, "fields": {reading: float(metrics[grouping][reading][key])}, "tags": {grouping: key}})
-print(payload)
-#client.write_points(payload, database=config["influxdb_database"])
+
+if args.local:
+    print(payload)
+else:
+    client.write_points(payload, database=config["influxdb_database"])
