@@ -96,15 +96,6 @@ metrics["partition"]["queue_time_median"] = {}
 metrics["partition"]["queue_time_q95"] = {}
 metrics["partition"]["queue_jobs"] = {}
 
-#metrics["user"] = {}
-#metrics["user"]["cpu_usage"] = {}
-#metrics["user"]["gpu_usage"] = {}
-#metrics["user"]["mem_usage"] = {}
-#metrics["user"]["jobs_running"] = {}
-#metrics["user"]["jobs_pending"] = {}
-#metrics["user"]["queue_time"] = {}
-#metrics["user"]["queue_jobs"] = {}
-
 metrics["group"] = {}
 metrics["group"]["cpu_usage"] = {}
 metrics["group"]["gpu_usage"] = {}
@@ -302,15 +293,9 @@ for i, job in enumerate(jobs):
             elif job["tres_per_node"] == "gres/gpu":
                 gpu = job["node_count"]["number"]
 
-        #metrics["user"]["jobs_running"][user] += 1
-        #metrics["user"]["cpu_usage"][user] += cpu
-        #metrics["user"]["gpu_usage"][user] += gpu
-        #metrics["user"]["mem_usage"][user] += mem
-
         try:
             queue_time = job["start_time"]["number"] - job["submit_time"]["number"]
-            #metrics["user"]["queue_jobs"][user] += 1
-            #metrics["user"]["queue_time"][user] = (float(metrics["user"]["queue_time"][user] + queue_time)) / metrics["user"]["queue_jobs"][user]
+
             metrics["partition"]["queue_jobs"]["ALL"] += 1
             metrics["partition"]["queue_time"]["ALL"][i] = queue_time
             metrics["partition"]["queue_jobs"][job["partition"]] += 1
@@ -340,8 +325,6 @@ for i, job in enumerate(jobs):
         for partition in job["partition"].split(","):
             if partition in metrics["partition"]["jobs_pending"]:
                 metrics["partition"]["jobs_pending"][partition] += 1
-
-        #metrics["user"]["jobs_pending"][user] += 1
 
         if user in user_groups:
             for group in user_groups[user]:
