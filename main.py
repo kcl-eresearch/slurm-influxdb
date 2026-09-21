@@ -15,6 +15,7 @@ import re
 import subprocess
 import sys
 import yaml
+import numpy as np
 
 def tres_to_dict(tres_csv):
     resources = {}
@@ -90,6 +91,9 @@ metrics["partition"]["mem_usage_pc"] = {}
 metrics["partition"]["jobs_running"] = {}
 metrics["partition"]["jobs_pending"] = {}
 metrics["partition"]["queue_time"] = {}
+metrics["partition"]["queue_time_mean"] = {}
+metrics["partition"]["queue_time_median"] = {}
+metrics["partition"]["queue_time_q95"] = {}
 metrics["partition"]["queue_jobs"] = {}
 
 #metrics["user"] = {}
@@ -108,6 +112,9 @@ metrics["group"]["mem_usage"] = {}
 metrics["group"]["jobs_running"] = {}
 metrics["group"]["jobs_pending"] = {}
 metrics["group"]["queue_time"] = {}
+metrics["group"]["queue_time_mean"] = {}
+metrics["group"]["queue_time_median"] = {}
+metrics["group"]["queue_time_q95"] = {}
 metrics["group"]["queue_jobs"] = {}
 
 if config["user_lookup"]:
@@ -118,6 +125,9 @@ if config["user_lookup"]:
     metrics["ldap_attrib"]["jobs_running"] = {}
     metrics["ldap_attrib"]["jobs_pending"] = {}
     metrics["ldap_attrib"]["queue_time"] = {}
+    metrics["ldap_attrib"]["queue_time_mean"] = {}
+    metrics["ldap_attrib"]["queue_time_median"] = {}
+    metrics["ldap_attrib"]["queue_time_q95"] = {}
     metrics["ldap_attrib"]["queue_jobs"] = {}
 
 user_ids = {}
@@ -126,7 +136,21 @@ user_ldap = {}
 
 now = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
-for entry in slurm_command("sinfo", ["-a"])["sinfo"]:
+# get job data to use in data structure setup
+
+# sinfo = slurm_command("sinfo", ["-a"])["sinfo"]
+# sinfo_gres = slurm_command("sinfo", ["-N", "-OGresUsed"])["sinfo"]
+# jobs = slurm_command("squeue")["jobs"]
+
+# for testing
+with open("../sinfo.json") as f:
+    sinfo = json.load(f)["sinfo"]
+with open("../sinfo_gres.json") as f:
+    sinfo_gres = json.load(f)["sinfo"]
+with open("../squeue.json") as f:
+    jobs = json.load(f)["jobs"]
+
+for entry in sinfo:
     partitions.append(entry["partition"]["name"])
 
     for node in entry["nodes"]["nodes"]:
@@ -149,7 +173,7 @@ for part in partitions + ["ALL"]:
     metrics["partition"]["mem_usage_pc"][part] = 0
     metrics["partition"]["jobs_running"][part] = 0
     metrics["partition"]["jobs_pending"][part] = 0
-    metrics["partition"]["queue_time"][part] = 0
+    metrics["partition"]["queue_time"][part] = np.full(len(jobs), np.nan)
     metrics["partition"]["queue_jobs"][part] = 0
 
 for group in groups:
@@ -158,7 +182,7 @@ for group in groups:
     metrics["group"]["mem_usage"][group] = 0
     metrics["group"]["jobs_running"][group] = 0
     metrics["group"]["jobs_pending"][group] = 0
-    metrics["group"]["queue_time"][group] = 0
+    metrics["group"]["queue_time"][group] = np.full(len(jobs), np.nan)
     metrics["group"]["queue_jobs"][group] = 0
 
     members = grp.getgrnam(group)[3]
@@ -169,7 +193,7 @@ for group in groups:
 
 # Go through all the nodes and get their cpu/gpu/memory usage and store for each partition they belong to
 seen = []
-for entry in slurm_command("sinfo", ["-N", "-OGresUsed"])["sinfo"]:
+for entry in sinfo_gres:
     node = entry["nodes"]["nodes"][0]
     if node in seen:
         continue
@@ -221,7 +245,7 @@ for entry in slurm_command("sinfo", ["-N", "-OGresUsed"])["sinfo"]:
                 metrics["partition"]["gpu_usage_pc"][part] = 100 * (float(metrics["partition"]["gpu_usage"][part]) / metrics["partition"]["gpu_total"][part])
 
 # Now go through the jobs list to see user-specific stuff
-for job in slurm_command("squeue")["jobs"]:
+for i, job in enumerate(jobs):
     if job["user_id"] not in user_ids:
         try:
             user = pwd.getpwuid(job["user_id"])[0]
@@ -250,7 +274,7 @@ for job in slurm_command("squeue")["jobs"]:
             metrics["ldap_attrib"]["gpu_usage"][user_ldap[user]] = 0
             metrics["ldap_attrib"]["mem_usage"][user_ldap[user]] = 0
             metrics["ldap_attrib"]["queue_jobs"][user_ldap[user]] = 0
-            metrics["ldap_attrib"]["queue_time"][user_ldap[user]] = 0
+            metrics["ldap_attrib"]["queue_time"][user_ldap[user]] = np.full(len(jobs), np.nan)
 
     if job["job_state"] == ["RUNNING"]:
         metrics["partition"]["jobs_running"]["ALL"] += 1
@@ -288,9 +312,9 @@ for job in slurm_command("squeue")["jobs"]:
             #metrics["user"]["queue_jobs"][user] += 1
             #metrics["user"]["queue_time"][user] = (float(metrics["user"]["queue_time"][user] + queue_time)) / metrics["user"]["queue_jobs"][user]
             metrics["partition"]["queue_jobs"]["ALL"] += 1
-            metrics["partition"]["queue_time"]["ALL"] = (float(metrics["partition"]["queue_time"]["ALL"] + queue_time)) / metrics["partition"]["queue_jobs"]["ALL"]
+            metrics["partition"]["queue_time"]["ALL"][i] = queue_time
             metrics["partition"]["queue_jobs"][job["partition"]] += 1
-            metrics["partition"]["queue_time"][job["partition"]] = (float(metrics["partition"]["queue_time"][job["partition"]] * (metrics["partition"]["queue_jobs"][job["partition"]] - 1) + queue_time)) / metrics["partition"]["queue_jobs"][job["partition"]]
+            metrics["partition"]["queue_time"][job["partition"]][i] = queue_time
 
             if user in user_groups:
                 for group in user_groups[user]:
@@ -299,7 +323,7 @@ for job in slurm_command("squeue")["jobs"]:
                     metrics["group"]["gpu_usage"][group] += gpu
                     metrics["group"]["mem_usage"][group] += mem
                     metrics["group"]["queue_jobs"][group] += 1
-                    metrics["group"]["queue_time"][group] = (float(metrics["group"]["queue_time"][group] + queue_time)) / metrics["group"]["queue_jobs"][group]
+                    metrics["group"]["queue_time"][group][i] = queue_time
 
             if config["user_lookup"]:
                 metrics["ldap_attrib"]["jobs_running"][user_ldap[user]] += 1
@@ -307,7 +331,7 @@ for job in slurm_command("squeue")["jobs"]:
                 metrics["ldap_attrib"]["gpu_usage"][user_ldap[user]] += gpu
                 metrics["ldap_attrib"]["mem_usage"][user_ldap[user]] += mem
                 metrics["ldap_attrib"]["queue_jobs"][user_ldap[user]] += 1
-                metrics["ldap_attrib"]["queue_time"][user_ldap[user]] = (float(metrics["ldap_attrib"]["queue_time"][user_ldap[user]] + queue_time)) / metrics["ldap_attrib"]["queue_jobs"][user_ldap[user]]
+                metrics["ldap_attrib"]["queue_time"][user_ldap[user]][i] = queue_time
         except Exception as e:
             sys.stderr.write("Exception: %s\n" % e)
 
@@ -326,11 +350,39 @@ for job in slurm_command("squeue")["jobs"]:
         if config["user_lookup"]:
             metrics["ldap_attrib"]["jobs_pending"][user_ldap[user]] += 1
 
+# process collected queue times and calculate stats
+for partition in metrics["partition"]["queue_time"]:
+    queue_times = metrics["partition"]["queue_time"][partition]
+    
+    metrics["partition"]["queue_time_mean"][partition] = np.nanmean(queue_times)
+    metrics["partition"]["queue_time_median"][partition] = np.nanmedian(queue_times)
+    metrics["partition"]["queue_time_q95"][partition] = np.nanquantile(queue_times, 0.95)
+
+for group in metrics["group"]["queue_time"]:
+    queue_times = metrics["group"]["queue_time"][group]
+        
+    metrics["group"]["queue_time_mean"][group] = np.nanmean(queue_times)
+    metrics["group"]["queue_time_median"][group] = np.nanmedian(queue_times)
+    metrics["group"]["queue_time_q95"][group] = np.nanquantile(queue_times, 0.95)
+    
+if config["user_lookup"]:
+    for user in metrics["ldap_attrib"]["queue_time"]:
+        queue_times = metrics["ldap_attrib"]["queue_time"][user]
+
+        metrics["ldap_attrib"]["queue_time_mean"][user] = np.nanmean(queue_times)
+        metrics["ldap_attrib"]["queue_time_median"][user] = np.nanmedian(queue_times)
+        metrics["ldap_attrib"]["queue_time_q95"][user] = np.nanquantile(queue_times, 0.95)
+
 payload = []
-for grouping in ["partition", "group", "ldap_attrib"]:
-    for reading in ["cpu_total", "cpu_usage", "cpu_usage_pc", "gpu_total", "gpu_usage", "gpu_usage_pc", "mem_total", "mem_usage", "mem_usage_pc", "jobs_running", "jobs_pending", "queue_time"]:
+groupings = ["partition", "group"]
+if config["user_lookup"]:
+    groupings = groupings + ["ldap_attrib"]
+
+for grouping in groupings:
+    for reading in ["cpu_total", "cpu_usage", "cpu_usage_pc", "gpu_total", "gpu_usage", "gpu_usage_pc", "mem_total", "mem_usage", "mem_usage_pc", "jobs_running", "jobs_pending", 
+                    "queue_time_mean", "queue_time_median", "queue_time_q95"]:
         if reading in metrics[grouping] and len(metrics[grouping][reading]) > 0:
             for key in metrics[grouping][reading].keys():
                 payload.append({"measurement": "%s_%s" % (grouping, reading), "time": now, "fields": {reading: float(metrics[grouping][reading][key])}, "tags": {grouping: key}})
-
-client.write_points(payload, database=config["influxdb_database"])
+print(payload)
+#client.write_points(payload, database=config["influxdb_database"])
