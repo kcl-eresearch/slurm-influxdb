@@ -128,7 +128,7 @@ user_ids = {}
 user_groups = {}
 user_ldap = {}
 
-now = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+now = datetime.datetime.now(tz=datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 # get job data to use in data structure setup
 
