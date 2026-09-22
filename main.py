@@ -100,7 +100,6 @@ metrics["partition"]["queue_time"] = {}
 metrics["partition"]["queue_time_mean"] = {}
 metrics["partition"]["queue_time_median"] = {}
 metrics["partition"]["queue_time_q95"] = {}
-metrics["partition"]["queue_jobs"] = {}
 
 metrics["group"] = {}
 metrics["group"]["cpu_usage"] = {}
@@ -112,7 +111,6 @@ metrics["group"]["queue_time"] = {}
 metrics["group"]["queue_time_mean"] = {}
 metrics["group"]["queue_time_median"] = {}
 metrics["group"]["queue_time_q95"] = {}
-metrics["group"]["queue_jobs"] = {}
 
 if config["user_lookup"]:
     metrics["ldap_attrib"] = {}
@@ -125,7 +123,6 @@ if config["user_lookup"]:
     metrics["ldap_attrib"]["queue_time_mean"] = {}
     metrics["ldap_attrib"]["queue_time_median"] = {}
     metrics["ldap_attrib"]["queue_time_q95"] = {}
-    metrics["ldap_attrib"]["queue_jobs"] = {}
 
 user_ids = {}
 user_groups = {}
@@ -171,7 +168,6 @@ for part in partitions + ["ALL"]:
     metrics["partition"]["jobs_running"][part] = 0
     metrics["partition"]["jobs_pending"][part] = 0
     metrics["partition"]["queue_time"][part] = np.full(len(jobs), np.nan)
-    metrics["partition"]["queue_jobs"][part] = 0
 
 for group in groups:
     metrics["group"]["cpu_usage"][group] = 0
@@ -180,7 +176,6 @@ for group in groups:
     metrics["group"]["jobs_running"][group] = 0
     metrics["group"]["jobs_pending"][group] = 0
     metrics["group"]["queue_time"][group] = np.full(len(jobs), np.nan)
-    metrics["group"]["queue_jobs"][group] = 0
 
     members = grp.getgrnam(group)[3]
     for user in members:
@@ -270,7 +265,6 @@ for i, job in enumerate(jobs):
             metrics["ldap_attrib"]["cpu_usage"][user_ldap[user]] = 0
             metrics["ldap_attrib"]["gpu_usage"][user_ldap[user]] = 0
             metrics["ldap_attrib"]["mem_usage"][user_ldap[user]] = 0
-            metrics["ldap_attrib"]["queue_jobs"][user_ldap[user]] = 0
             metrics["ldap_attrib"]["queue_time"][user_ldap[user]] = np.full(len(jobs), np.nan)
 
     if job["job_state"] == ["RUNNING"]:
@@ -302,9 +296,7 @@ for i, job in enumerate(jobs):
         try:
             queue_time = job["start_time"]["number"] - job["submit_time"]["number"]
 
-            metrics["partition"]["queue_jobs"]["ALL"] += 1
             metrics["partition"]["queue_time"]["ALL"][i] = queue_time
-            metrics["partition"]["queue_jobs"][job["partition"]] += 1
             metrics["partition"]["queue_time"][job["partition"]][i] = queue_time
 
             if user in user_groups:
@@ -313,7 +305,6 @@ for i, job in enumerate(jobs):
                     metrics["group"]["cpu_usage"][group] += cpu
                     metrics["group"]["gpu_usage"][group] += gpu
                     metrics["group"]["mem_usage"][group] += mem
-                    metrics["group"]["queue_jobs"][group] += 1
                     metrics["group"]["queue_time"][group][i] = queue_time
 
             if config["user_lookup"]:
@@ -321,7 +312,6 @@ for i, job in enumerate(jobs):
                 metrics["ldap_attrib"]["cpu_usage"][user_ldap[user]] += cpu
                 metrics["ldap_attrib"]["gpu_usage"][user_ldap[user]] += gpu
                 metrics["ldap_attrib"]["mem_usage"][user_ldap[user]] += mem
-                metrics["ldap_attrib"]["queue_jobs"][user_ldap[user]] += 1
                 metrics["ldap_attrib"]["queue_time"][user_ldap[user]][i] = queue_time
         except Exception as e:
             sys.stderr.write("Exception: %s\n" % e)
