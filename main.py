@@ -336,6 +336,7 @@ for partition in metrics["partition"]["queue_time"]:
     metrics["partition"]["queue_time_mean"][partition] = np.nanmean(queue_times)
     metrics["partition"]["queue_time_median"][partition] = np.nanmedian(queue_times)
     metrics["partition"]["queue_time_q95"][partition] = np.nanquantile(queue_times, 0.95)
+    metrics["partition"]["queue_time"][partition] = metrics["partition"]["queue_time_mean"][partition]
 
 for group in metrics["group"]["queue_time"]:
     queue_times = metrics["group"]["queue_time"][group]
@@ -343,6 +344,7 @@ for group in metrics["group"]["queue_time"]:
     metrics["group"]["queue_time_mean"][group] = np.nanmean(queue_times)
     metrics["group"]["queue_time_median"][group] = np.nanmedian(queue_times)
     metrics["group"]["queue_time_q95"][group] = np.nanquantile(queue_times, 0.95)
+    metrics["group"]["queue_time"][group] = metrics["group"]["queue_time_mean"][group]
     
 if config["user_lookup"]:
     for user in metrics["ldap_attrib"]["queue_time"]:
@@ -351,6 +353,7 @@ if config["user_lookup"]:
         metrics["ldap_attrib"]["queue_time_mean"][user] = np.nanmean(queue_times)
         metrics["ldap_attrib"]["queue_time_median"][user] = np.nanmedian(queue_times)
         metrics["ldap_attrib"]["queue_time_q95"][user] = np.nanquantile(queue_times, 0.95)
+        metrics["ldap_attrib"]["queue_time"][user] = metrics["ldap_attrib"]["queue_time_mean"][user]
 
 payload = []
 groupings = ["partition", "group"]
@@ -359,7 +362,7 @@ if config["user_lookup"]:
 
 for grouping in groupings:
     for reading in ["cpu_total", "cpu_usage", "cpu_usage_pc", "gpu_total", "gpu_usage", "gpu_usage_pc", "mem_total", "mem_usage", "mem_usage_pc", "jobs_running", "jobs_pending", 
-                    "queue_time_mean", "queue_time_median", "queue_time_q95"]:
+                    "queue_time", "queue_time_mean", "queue_time_median", "queue_time_q95"]:
         if reading in metrics[grouping] and len(metrics[grouping][reading]) > 0:
             for key in metrics[grouping][reading].keys():
                 payload.append({"measurement": "%s_%s" % (grouping, reading), "time": now, "fields": {reading: float(metrics[grouping][reading][key])}, "tags": {grouping: key}})
