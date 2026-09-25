@@ -333,26 +333,26 @@ for i, job in enumerate(jobs):
 for partition in metrics["partition"]["queue_time"]:
     queue_times = metrics["partition"]["queue_time"][partition]
     
-    metrics["partition"]["queue_time_mean"][partition] = np.nanmean(queue_times)
-    metrics["partition"]["queue_time_median"][partition] = np.nanmedian(queue_times)
-    metrics["partition"]["queue_time_q95"][partition] = np.nanquantile(queue_times, 0.95)
+    metrics["partition"]["queue_time_mean"][partition] = np.nan_to_num(np.nanmean(queue_times))
+    metrics["partition"]["queue_time_median"][partition] = np.nan_to_num(np.nanmedian(queue_times))
+    metrics["partition"]["queue_time_q95"][partition] = np.nan_to_num(np.nanquantile(queue_times, 0.95))
     metrics["partition"]["queue_time"][partition] = metrics["partition"]["queue_time_mean"][partition]
 
 for group in metrics["group"]["queue_time"]:
     queue_times = metrics["group"]["queue_time"][group]
         
-    metrics["group"]["queue_time_mean"][group] = np.nanmean(queue_times)
-    metrics["group"]["queue_time_median"][group] = np.nanmedian(queue_times)
-    metrics["group"]["queue_time_q95"][group] = np.nanquantile(queue_times, 0.95)
+    metrics["group"]["queue_time_mean"][group] = np.nan_to_num(np.nanmean(queue_times))
+    metrics["group"]["queue_time_median"][group] = np.nan_to_num(np.nanmedian(queue_times))
+    metrics["group"]["queue_time_q95"][group] = np.nan_to_num(np.nanquantile(queue_times, 0.95))
     metrics["group"]["queue_time"][group] = metrics["group"]["queue_time_mean"][group]
     
 if config["user_lookup"]:
     for user in metrics["ldap_attrib"]["queue_time"]:
         queue_times = metrics["ldap_attrib"]["queue_time"][user]
 
-        metrics["ldap_attrib"]["queue_time_mean"][user] = np.nanmean(queue_times)
-        metrics["ldap_attrib"]["queue_time_median"][user] = np.nanmedian(queue_times)
-        metrics["ldap_attrib"]["queue_time_q95"][user] = np.nanquantile(queue_times, 0.95)
+        metrics["ldap_attrib"]["queue_time_mean"][user] = np.nan_to_num(np.nanmean(queue_times))
+        metrics["ldap_attrib"]["queue_time_median"][user] = np.nan_to_num(np.nanmedian(queue_times))
+        metrics["ldap_attrib"]["queue_time_q95"][user] = np.nan_to_num(np.nanquantile(queue_times, 0.95))
         metrics["ldap_attrib"]["queue_time"][user] = metrics["ldap_attrib"]["queue_time_mean"][user]
 
 payload = []
