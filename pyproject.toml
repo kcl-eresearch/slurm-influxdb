@@ -1,0 +1,23 @@
+[project]
+name = "slurm-influxdb"
+version = "0.1.0"
+description = "Aggregate Slurm queue metrics and feed them into an InfluxDB time-series database"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "certifi>=2026.7.22",
+    "charset-normalizer>=3.5.1",
+    "idna>=3.20",
+    "influxdb>=5.3.2",
+    "msgpack>=1.2.2",
+    "numpy>=1.26.4",
+    "pyasn1>=0.6.4",
+    "pyasn1-modules>=0.4.2",
+    "python-dateutil>=2.9.0.post0",
+    "python-ldap>=3.4.8",
+    "pytz>=2026.3.post1",
+    "pyyaml>=6.0.3",
+    "requests>=2.34.2",
+    "six>=1.17.0",
+    "urllib3>=2.8.0",
+]
